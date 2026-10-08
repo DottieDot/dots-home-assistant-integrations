@@ -17,7 +17,7 @@ jobs:
         run: pip install -r requirements-dev.txt
       - name: Run tests
         run: pytest -q
-      - name: Validate HACS/integration manifests locally
+      - name: Validate integration manifests
         run: python3 scripts/validate_manifests.py
 
   hacs:
@@ -28,9 +28,3 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
-          # Private repositories cannot be fetched via unauthenticated
-          # raw.githubusercontent.com (used by hacsjson + integration_manifest).
-          # Description/topics/license require GitHub repo admin settings that
-          # this workflow token cannot change. Brands is validated from the
-          # git tree once brand/icon.png is present.
-          ignore: description topics license hacsjson integration_manifest
