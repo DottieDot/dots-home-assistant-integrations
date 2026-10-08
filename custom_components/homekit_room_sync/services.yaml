@@ -1,0 +1,19 @@
+sync:
+  name: Sync rooms
+  description: >
+    Recompute Home Assistant Area membership and update the entity filters on
+    each managed HomeKit bridge.
+  fields:
+    area_id:
+      name: Area
+      description: Optional area id to limit the sync to a single room bridge.
+      required: false
+      example: living_room
+      selector:
+        text:
+
+ensure_bridges:
+  name: Ensure bridges
+  description: >
+    Create any missing per-area HomeKit bridges, then run a full sync. Use this
+    after adding Areas in the integration options.

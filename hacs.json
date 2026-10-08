@@ -1,0 +1,8 @@
+{
+  "name": "HomeKit Room Sync",
+  "filename": "homekit_room_sync.zip",
+  "zip_release": true,
+  "hide_default_branch": true,
+  "render_readme": false,
+  "homeassistant": "2024.1.0"
+}

@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HomeKit Room Sync",
+        "description": "Select the Home Assistant Areas that should each get a dedicated HomeKit Bridge. After setup, pair every bridge once in the Apple Home app and assign it to the matching room.",
+        "data": {
+          "areas": "Areas (rooms)",
+          "domains": "Entity domains to expose",
+          "include_entities": "Always include these entities (one per line)",
+          "exclude_entities": "Never expose these entities (one per line)"
+        }
+      }
+    },
+    "error": {
+      "areas_required": "Select at least one Area.",
+      "domains_required": "Select at least one domain."
+    },
+    "abort": {
+      "already_configured": "HomeKit Room Sync is already configured.",
+      "no_areas": "Create at least one Area in Home Assistant before setting up this integration."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HomeKit Room Sync options",
+        "description": "Add or remove Areas anytime. New Areas get a new HomeKit Bridge that you pair once into the matching Apple Home room.",
+        "data": {
+          "areas": "Areas (rooms)",
+          "domains": "Entity domains to expose",
+          "include_entities": "Always include these entities (one per line)",
+          "exclude_entities": "Never expose these entities (one per line)"
+        }
+      }
+    },
+    "error": {
+      "areas_required": "Select at least one Area.",
+      "domains_required": "Select at least one domain."
+    }
+  },
+  "services": {
+    "sync": {
+      "name": "Sync rooms",
+      "description": "Recompute Area membership and update managed HomeKit bridges.",
+      "fields": {
+        "area_id": {
+          "name": "Area",
+          "description": "Optional area id to sync a single room bridge."
+        }
+      }
+    },
+    "ensure_bridges": {
+      "name": "Ensure bridges",
+      "description": "Create missing per-area HomeKit bridges and sync."
+    }
+  }
+}
