@@ -10,6 +10,8 @@ from homeassistant.config_entries import ConfigEntry, SOURCE_IMPORT
 from custom_components.homekit_room_sync.bridge_manager import (
     RoomSyncManager,
     empty_include_filter,
+    filter_has_include_rules,
+    include_only_filter,
 )
 from custom_components.homekit_room_sync.const import (
     CONF_AREA_BRIDGES,
@@ -22,6 +24,8 @@ from custom_components.homekit_room_sync.const import (
     HK_CONF_NAME,
     HK_CONF_PORT,
     HK_FILTER_INCLUDE_ENTITIES,
+    HK_FILTER_INCLUDE_ENTITY_GLOBS,
+    HK_INCLUDE_NONE_GLOB,
     HOMEKIT_DOMAIN,
 )
 from tests.conftest import (
@@ -32,6 +36,23 @@ from tests.conftest import (
     FakeEntityRegistry,
     make_hass,
 )
+
+
+def test_include_only_filter_never_means_expose_all():
+    """Empty include lists must still have an include rule (HA expose-all trap)."""
+    empty = include_only_filter([])
+    assert empty[HK_FILTER_INCLUDE_ENTITIES] == []
+    assert empty[HK_FILTER_INCLUDE_ENTITY_GLOBS] == [HK_INCLUDE_NONE_GLOB]
+    assert filter_has_include_rules(empty)
+
+    populated = include_only_filter(["light.kitchen", "switch.kitchen"])
+    assert populated[HK_FILTER_INCLUDE_ENTITIES] == [
+        "light.kitchen",
+        "switch.kitchen",
+    ]
+    assert populated[HK_FILTER_INCLUDE_ENTITY_GLOBS] == []
+    assert filter_has_include_rules(populated)
+    assert empty_include_filter([]) == include_only_filter([])
 
 
 def _sync_entry(**overrides) -> ConfigEntry:
@@ -199,11 +220,76 @@ async def test_move_removes_before_add():
         await manager.async_sync()
 
     assert kitchen.options[HK_CONF_FILTER][HK_FILTER_INCLUDE_ENTITIES] == []
+    assert kitchen.options[HK_CONF_FILTER][HK_FILTER_INCLUDE_ENTITY_GLOBS] == [
+        HK_INCLUDE_NONE_GLOB
+    ]
     assert living.options[HK_CONF_FILTER][HK_FILTER_INCLUDE_ENTITIES] == [
         "light.move_me"
     ]
     # Removal (kitchen) must happen before addition (living)
     assert reload_order == ["hk_kitchen", "hk_living"]
+
+
+@pytest.mark.asyncio
+async def test_heals_unsafe_empty_filter_when_membership_unchanged():
+    """An empty HA filter means expose-all; rewrite even if entity list matches."""
+    hass = make_hass()
+    # Simulate a bridge stuck on the pre-fix empty filter (no include rules).
+    kitchen = ConfigEntry(
+        domain=HOMEKIT_DOMAIN,
+        title="Kitchen:21064",
+        data={HK_CONF_NAME: "Kitchen", HK_CONF_PORT: 21064},
+        options={
+            HK_CONF_FILTER: {
+                "include_domains": [],
+                "include_entities": [],
+                "exclude_domains": [],
+                "exclude_entities": [],
+                "include_entity_globs": [],
+                "exclude_entity_globs": [],
+            }
+        },
+        entry_id="hk_kitchen",
+    )
+    hass.config_entries.add(kitchen)
+
+    sync_entry = _sync_entry(
+        **{
+            CONF_AREAS: ["kitchen"],
+            CONF_AREA_BRIDGES: {
+                "kitchen": {
+                    "area_id": "kitchen",
+                    CONF_ENTRY_ID: "hk_kitchen",
+                    "bridge_name": "Kitchen",
+                    "port": 21064,
+                }
+            },
+        }
+    )
+    hass.config_entries.add(sync_entry)
+
+    with (
+        patch(
+            "custom_components.homekit_room_sync.helpers.er.async_get",
+            return_value=FakeEntityRegistry([]),
+        ),
+        patch(
+            "custom_components.homekit_room_sync.helpers.dr.async_get",
+            return_value=FakeDeviceRegistry([]),
+        ),
+        patch(
+            "custom_components.homekit_room_sync.helpers.ar.async_get",
+            return_value=FakeAreaRegistry([FakeArea("kitchen", "Kitchen")]),
+        ),
+    ):
+        manager = RoomSyncManager(hass, sync_entry)
+        summary = await manager.async_sync()
+
+    assert summary["bridges_updated"] == 1
+    filt = kitchen.options[HK_CONF_FILTER]
+    assert filt[HK_FILTER_INCLUDE_ENTITIES] == []
+    assert filt[HK_FILTER_INCLUDE_ENTITY_GLOBS] == [HK_INCLUDE_NONE_GLOB]
+    assert filter_has_include_rules(filt)
 
 
 @pytest.mark.asyncio
@@ -215,10 +301,24 @@ async def test_create_bridge_via_import_flow():
     hass.config_entries.add(sync_entry)
 
     created = _homekit_entry("hk_office", "Office", 21064, unique_id=None)
+    captured_import: dict = {}
 
     async def _flow_init(domain, context=None, data=None):
         assert domain == HOMEKIT_DOMAIN
         assert context["source"] == SOURCE_IMPORT
+        captured_import.update(data or {})
+        # Mirror HomeKit import: filter starts in data, then moves to options.
+        created.data = dict(created.data)
+        created.data.update(
+            {
+                HK_CONF_NAME: data[HK_CONF_NAME],
+                HK_CONF_PORT: data[HK_CONF_PORT],
+            }
+        )
+        created.options = {
+            HK_CONF_FILTER: data[HK_CONF_FILTER],
+            "mode": data.get("mode", "bridge"),
+        }
         hass.config_entries.add(created)
         return {"type": "create_entry", "data": data}
 
@@ -229,13 +329,17 @@ async def test_create_bridge_via_import_flow():
         return_value=FakeAreaRegistry([FakeArea("office", "Office")]),
     ):
         manager = RoomSyncManager(hass, sync_entry)
-        # Avoid entity collection complications for this create-only assertion
         with patch(
             "custom_components.homekit_room_sync.bridge_manager.collect_area_entities",
-            return_value={"office": set()},
+            return_value={"office": {"light.desk"}},
         ):
             await manager.async_sync()
 
     assert created.unique_id == "homekit_room_sync_area_office"
     assert "office" in sync_entry.data[CONF_AREA_BRIDGES]
     assert sync_entry.data[CONF_AREA_BRIDGES]["office"][CONF_ENTRY_ID] == "hk_office"
+    # Bridge must be created with the area's entities — never an expose-all filter.
+    assert captured_import[HK_CONF_FILTER][HK_FILTER_INCLUDE_ENTITIES] == [
+        "light.desk"
+    ]
+    assert filter_has_include_rules(captured_import[HK_CONF_FILTER])

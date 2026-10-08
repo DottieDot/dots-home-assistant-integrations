@@ -34,6 +34,11 @@ HK_FILTER_EXCLUDE_ENTITIES: Final = "exclude_entities"
 HK_FILTER_INCLUDE_ENTITY_GLOBS: Final = "include_entity_globs"
 HK_FILTER_EXCLUDE_ENTITY_GLOBS: Final = "exclude_entity_globs"
 
+# Home Assistant's EntityFilter treats a completely empty filter as
+# "include everything". When a per-area bridge should expose nothing, we keep
+# this never-matching include glob so the filter stays in include-only mode.
+HK_INCLUDE_NONE_GLOB: Final = "homekit_room_sync.none"
+
 EVENT_ENTITY_REGISTRY_UPDATED: Final = "entity_registry_updated"
 EVENT_AREA_REGISTRY_UPDATED: Final = "area_registry_updated"
 EVENT_DEVICE_REGISTRY_UPDATED: Final = "device_registry_updated"

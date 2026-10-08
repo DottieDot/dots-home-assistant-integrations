@@ -34,6 +34,7 @@ from .const import (
     HK_FILTER_INCLUDE_DOMAINS,
     HK_FILTER_INCLUDE_ENTITIES,
     HK_FILTER_INCLUDE_ENTITY_GLOBS,
+    HK_INCLUDE_NONE_GLOB,
     HK_MODE_BRIDGE,
     HOMEKIT_DOMAIN,
     PORT_SEARCH_RANGE,
@@ -47,16 +48,40 @@ from .helpers import (
 _LOGGER = logging.getLogger(__name__)
 
 
-def empty_include_filter(entity_ids: list[str]) -> dict[str, list[str]]:
-    """Build a HomeKit filter that exposes only the given entities."""
+def include_only_filter(entity_ids: list[str]) -> dict[str, list[str]]:
+    """Build a HomeKit filter that exposes only the given entities.
+
+    An entirely empty Home Assistant entity filter means "include everything".
+    When ``entity_ids`` is empty we keep a never-matching include glob so the
+    bridge stays in include-only mode and exposes nothing.
+    """
+    entities = sorted({entity_id for entity_id in entity_ids if entity_id})
     return {
         HK_FILTER_INCLUDE_DOMAINS: [],
-        HK_FILTER_INCLUDE_ENTITIES: sorted(entity_ids),
+        HK_FILTER_INCLUDE_ENTITIES: entities,
         HK_FILTER_EXCLUDE_DOMAINS: [],
         HK_FILTER_EXCLUDE_ENTITIES: [],
-        HK_FILTER_INCLUDE_ENTITY_GLOBS: [],
+        HK_FILTER_INCLUDE_ENTITY_GLOBS: (
+            [] if entities else [HK_INCLUDE_NONE_GLOB]
+        ),
         HK_FILTER_EXCLUDE_ENTITY_GLOBS: [],
     }
+
+
+def empty_include_filter(entity_ids: list[str]) -> dict[str, list[str]]:
+    """Alias for :func:`include_only_filter` (kept for older call sites/tests)."""
+    return include_only_filter(entity_ids)
+
+
+def filter_has_include_rules(filt: dict[str, Any] | None) -> bool:
+    """Return True if the filter is in include-only mode (not expose-all)."""
+    if not isinstance(filt, dict):
+        return False
+    return bool(
+        filt.get(HK_FILTER_INCLUDE_ENTITIES)
+        or filt.get(HK_FILTER_INCLUDE_DOMAINS)
+        or filt.get(HK_FILTER_INCLUDE_ENTITY_GLOBS)
+    )
 
 
 def _used_homekit_ports(hass: HomeAssistant) -> set[int]:
@@ -168,18 +193,34 @@ class RoomSyncManager:
     async def async_ensure_bridges(self) -> dict[str, dict[str, Any]]:
         """Create missing HomeKit bridges for configured areas."""
         async with self._lock:
-            return await self._async_ensure_bridges_unlocked()
+            membership = self._collect_membership()
+            return await self._async_ensure_bridges_unlocked(membership)
 
     async def async_sync(self) -> dict[str, Any]:
         """Ensure bridges exist and push current entity membership."""
         async with self._lock:
-            area_bridges = await self._async_ensure_bridges_unlocked()
-            return await self._async_sync_unlocked(area_bridges)
+            membership = self._collect_membership()
+            area_bridges = await self._async_ensure_bridges_unlocked(membership)
+            return await self._async_sync_unlocked(area_bridges, membership)
 
-    async def _async_ensure_bridges_unlocked(self) -> dict[str, dict[str, Any]]:
+    def _collect_membership(self) -> dict[str, set[str]]:
+        """Compute current area → entity membership."""
+        return collect_area_entities(
+            self.hass,
+            set(self.area_ids),
+            self.domains,
+            self.include_entities,
+            self.exclude_entities,
+        )
+
+    async def _async_ensure_bridges_unlocked(
+        self, membership: dict[str, set[str]] | None = None
+    ) -> dict[str, dict[str, Any]]:
         area_bridges = get_area_bridge_map(self.entry)
         created = 0
         changed = False
+        if membership is None:
+            membership = self._collect_membership()
 
         for area_id in self.area_ids:
             existing_meta = area_bridges.get(area_id)
@@ -194,7 +235,10 @@ class RoomSyncManager:
                 homekit_entry = find_bridge_by_unique_id(self.hass, area_id)
 
             if homekit_entry is None:
-                homekit_entry = await self._async_create_bridge(area_id)
+                initial_entities = sorted(membership.get(area_id, set()))
+                homekit_entry = await self._async_create_bridge(
+                    area_id, initial_entities
+                )
                 created += 1
                 changed = True
             else:
@@ -234,19 +278,27 @@ class RoomSyncManager:
         self.last_sync_summary["bridges_created"] = created
         return area_bridges
 
-    async def _async_create_bridge(self, area_id: str) -> ConfigEntry:
-        """Create a HomeKit bridge config entry for an area via import flow."""
+    async def _async_create_bridge(
+        self, area_id: str, entity_ids: list[str] | None = None
+    ) -> ConfigEntry:
+        """Create a HomeKit bridge config entry for an area via import flow.
+
+        The bridge is created with an include-only filter for ``entity_ids`` so
+        HomeKit never briefly advertises the entire home (an empty HA filter
+        means include-everything).
+        """
         label = area_label(self.hass, area_id)
         desired_name = sanitize_bridge_name(label)
         name = unique_bridge_name(self.hass, desired_name)
         port = allocate_port(self.hass)
+        initial_entities = list(entity_ids or [])
 
         import_data = {
             HK_CONF_NAME: name,
             HK_CONF_PORT: port,
             HK_CONF_MODE: HK_MODE_BRIDGE,
             HK_CONF_EXCLUDE_ACCESSORY_MODE: True,
-            HK_CONF_FILTER: empty_include_filter([]),
+            HK_CONF_FILTER: include_only_filter(initial_entities),
         }
 
         _LOGGER.info(
@@ -292,15 +344,12 @@ class RoomSyncManager:
         return homekit_entry
 
     async def _async_sync_unlocked(
-        self, area_bridges: dict[str, dict[str, Any]]
+        self,
+        area_bridges: dict[str, dict[str, Any]],
+        membership: dict[str, set[str]] | None = None,
     ) -> dict[str, Any]:
-        membership = collect_area_entities(
-            self.hass,
-            set(self.area_ids),
-            self.domains,
-            self.include_entities,
-            self.exclude_entities,
-        )
+        if membership is None:
+            membership = self._collect_membership()
 
         # Two-pass sync so moves remove from the old bridge before adding to the new.
         # Pass 1: shrink filters (removals / moves-out)
@@ -323,8 +372,19 @@ class RoomSyncManager:
             current = self._current_include_entities(homekit_entry)
             desired_set = set(desired)
             current_set = set(current)
+            unsafe_empty = self._has_unsafe_empty_filter(homekit_entry)
 
-            if desired_set == current_set:
+            if desired_set == current_set and not unsafe_empty:
+                continue
+
+            if desired_set == current_set and unsafe_empty:
+                # Heal bridges stuck on an empty (= expose-all) HomeKit filter.
+                _LOGGER.warning(
+                    "HomeKit bridge %s had an empty include filter "
+                    "(Home Assistant treats that as expose-all); rewriting",
+                    homekit_entry.title,
+                )
+                updates_pass1.append((homekit_entry, desired))
                 continue
 
             removed = current_set - desired_set
@@ -337,7 +397,7 @@ class RoomSyncManager:
             else:
                 # Mixed change (or move involving this bridge): shrink first.
                 interim = sorted(current_set - removed)
-                if set(interim) != current_set:
+                if set(interim) != current_set or unsafe_empty:
                     updates_pass1.append((homekit_entry, interim))
                 if set(interim) != desired_set:
                     updates_pass2.append((homekit_entry, desired))
@@ -368,20 +428,32 @@ class RoomSyncManager:
         )
         return summary
 
-    def _current_include_entities(self, homekit_entry: ConfigEntry) -> list[str]:
-        """Read the active include_entities list from options (preferred) or data."""
+    def _active_filter(self, homekit_entry: ConfigEntry) -> dict[str, Any] | None:
+        """Return the active HomeKit filter dict from options (preferred) or data."""
         for container in (homekit_entry.options, homekit_entry.data):
             filt = container.get(HK_CONF_FILTER)
-            if isinstance(filt, dict) and HK_FILTER_INCLUDE_ENTITIES in filt:
-                entities = filt.get(HK_FILTER_INCLUDE_ENTITIES) or []
-                return sorted(str(item) for item in entities)
+            if isinstance(filt, dict):
+                return filt
+        return None
+
+    def _has_unsafe_empty_filter(self, homekit_entry: ConfigEntry) -> bool:
+        """True when the bridge filter would expose every entity (no includes)."""
+        filt = self._active_filter(homekit_entry)
+        return not filter_has_include_rules(filt)
+
+    def _current_include_entities(self, homekit_entry: ConfigEntry) -> list[str]:
+        """Read the active include_entities list from options (preferred) or data."""
+        filt = self._active_filter(homekit_entry)
+        if isinstance(filt, dict) and HK_FILTER_INCLUDE_ENTITIES in filt:
+            entities = filt.get(HK_FILTER_INCLUDE_ENTITIES) or []
+            return sorted(str(item) for item in entities)
         return []
 
     async def _async_apply_filter(
         self, homekit_entry: ConfigEntry, entity_ids: list[str]
     ) -> bool:
         """Write include_entities into HomeKit options and reload the bridge."""
-        new_filter = empty_include_filter(entity_ids)
+        new_filter = include_only_filter(entity_ids)
 
         # HomeKit runtime reads filter from options. Keep data clean of filter keys
         # once options exist (matches core's import-from-data migration).
