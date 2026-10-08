@@ -1,4 +1,4 @@
-"""HA HomeKit Room Sync integration.
+"""HomeKit Room Sync integration.
 
 Creates one HomeKit Bridge per Home Assistant Area and keeps each bridge's
 entity filter synchronized with area membership. After a one-time pairing of
@@ -43,7 +43,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up HA HomeKit Room Sync from a config entry."""
+    """Set up HomeKit Room Sync from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
     manager = RoomSyncManager(hass, entry)
@@ -182,7 +182,7 @@ async def _async_notify_pairing(
         return
 
     lines = [
-        "### HA HomeKit Room Sync — one-time pairing",
+        "### HomeKit Room Sync — one-time pairing",
         "",
         "Pair each bridge below in the Apple **Home** app and assign it to the "
         "matching room. After that, devices added/moved/removed in Home Assistant "
@@ -210,7 +210,7 @@ async def _async_notify_pairing(
         "create",
         {
             "notification_id": f"{DOMAIN}_pairing",
-            "title": "HA HomeKit Room Sync",
+            "title": "HomeKit Room Sync",
             "message": "\n".join(lines),
         },
         blocking=False,

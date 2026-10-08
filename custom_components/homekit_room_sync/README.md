@@ -1,7 +1,9 @@
-# HA HomeKit Room Sync
+# HomeKit Room Sync
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
+
+> Mostly vibe-coded for personal use and not thoroughly reviewed. Use at your own risk.
 
 Home Assistant custom integration that keeps **Home Assistant Areas** aligned with **Apple HomeKit rooms**.
 
@@ -20,7 +22,7 @@ HomeKit Bridge can expose your devices to the Home app, but it cannot assign acc
 ## How it works
 
 ```text
-HA Area "Living Room" ──creates/manages──▶ HomeKit Bridge "HA Living Room"
+HA Area "Living Room" ──creates/manages──▶ HomeKit Bridge "Living Room"
                                               │
                                               │  (you pair once into
                                               │   Apple Home room
@@ -42,17 +44,17 @@ HA Area "Living Room" ──creates/manages──▶ HomeKit Bridge "HA Living R
 1. Open **HACS → Integrations**.
 2. ⋮ menu → **Custom repositories**.
 3. Add this repository URL as category **Integration**.
-4. Search for **HA HomeKit Room Sync**, install, then **restart Home Assistant**.
+4. Search for **HomeKit Room Sync**, install, then **restart Home Assistant**.
 
 ### Manual
 
-Copy this folder (`ha_hk_room_sync`) into your Home Assistant `config/custom_components/` directory and restart.
+Copy this folder (`homekit_room_sync`) into your Home Assistant `config/custom_components/` directory and restart.
 
 ## Setup
 
 1. Make sure the built-in **HomeKit Bridge** integration is available.
 2. Create your **Areas** in Home Assistant (Settings → Areas).
-3. Settings → Devices & services → **Add Integration** → **HA HomeKit Room Sync**.
+3. Settings → Devices & services → **Add Integration** → **HomeKit Room Sync**.
 4. Select the Areas to manage and the entity domains to expose.
 5. After setup, open the persistent notification (or the **Managed bridges** sensor attributes) for the list of bridges.
 6. In the Apple **Home** app, add each bridge and assign it to the **same-named room**.
@@ -70,8 +72,8 @@ That pairing step is the only per-room setup. Afterward, Area changes in HA driv
 
 ## Services
 
-- `ha_hk_room_sync.sync` — recompute membership and update bridges (optional `area_id`)
-- `ha_hk_room_sync.ensure_bridges` — create any missing per-area bridges, then sync
+- `homekit_room_sync.sync` — recompute membership and update bridges (optional `area_id`)
+- `homekit_room_sync.ensure_bridges` — create any missing per-area bridges, then sync
 
 ## Sensors
 
@@ -104,12 +106,19 @@ That pairing step is the only per-room setup. Afterward, Area changes in HA driv
 1. Confirm each Area bridge is paired and assigned to the matching HomeKit room.
 2. Check that the entity’s Area (or its device’s Area) is one of the managed Areas.
 3. Check the entity domain is enabled in the integration options and the entity is not hidden/disabled/config/diagnostic.
-4. Call `ha_hk_room_sync.sync` and watch Home Assistant logs.
+4. Call `homekit_room_sync.sync` and watch Home Assistant logs.
 5. Force-close and reopen the Home app if the UI looks stale.
 
 ```yaml
 logger:
   default: info
   logs:
-    custom_components.ha_hk_room_sync: debug
+    custom_components.homekit_room_sync: debug
 ```
+
+## Acknowledgements
+
+Inspired by earlier community work on Area ↔ HomeKit bridge sync:
+
+- [lcrostarosa/homekit-room-sync](https://github.com/lcrostarosa/homekit-room-sync)
+- [aequitas/homekit-room-sync](https://github.com/aequitas/homekit-room-sync)

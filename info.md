@@ -1,10 +1,12 @@
-# HA HomeKit Room Sync
+# HomeKit Room Sync
 
 Keeps Home Assistant Areas synchronized with Apple HomeKit rooms by managing
 **one HomeKit Bridge per Area**.
 
+> Mostly vibe-coded for personal use — not thoroughly reviewed. Use at your own risk.
+
 This repository is a monorepo of custom integrations. HACS installs the
-**HA HomeKit Room Sync** integration from it.
+**HomeKit Room Sync** integration from it.
 
 ## One-time setup
 
@@ -15,4 +17,4 @@ This repository is a monorepo of custom integrations. HACS installs the
 After that, adding, removing, or moving devices between Areas in Home Assistant
 updates HomeKit automatically.
 
-Full docs: [`custom_components/ha_hk_room_sync/README.md`](custom_components/ha_hk_room_sync/README.md)
+Full docs: [`custom_components/homekit_room_sync/README.md`](custom_components/homekit_room_sync/README.md)

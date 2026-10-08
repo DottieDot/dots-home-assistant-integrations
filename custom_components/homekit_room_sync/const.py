@@ -1,10 +1,10 @@
-"""Constants for HA HomeKit Room Sync."""
+"""Constants for HomeKit Room Sync."""
 
 from __future__ import annotations
 
 from typing import Final
 
-DOMAIN: Final = "ha_hk_room_sync"
+DOMAIN: Final = "homekit_room_sync"
 HOMEKIT_DOMAIN: Final = "homekit"
 
 CONF_AREAS: Final = "areas"

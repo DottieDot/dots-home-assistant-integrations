@@ -46,6 +46,10 @@ def validate_hacs_json() -> None:
         _fail("hacs.json 'homeassistant' must be a string when present")
     if "render_readme" in data and not isinstance(data["render_readme"], bool):
         _fail("hacs.json 'render_readme' must be a boolean when present")
+    if data.get("zip_release"):
+        filename = data.get("filename")
+        if not isinstance(filename, str) or not filename.endswith(".zip"):
+            _fail("hacs.json zip_release=true requires a .zip filename")
     print(f"OK  {HACS_JSON.relative_to(ROOT)}")
 
 

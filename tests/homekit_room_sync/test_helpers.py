@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from custom_components.ha_hk_room_sync.helpers import (
+from custom_components.homekit_room_sync.helpers import (
     collect_area_entities,
     parse_entity_list,
     resolve_entity_area_id,
@@ -27,8 +27,8 @@ def test_parse_entity_list_multiline():
 
 
 def test_sanitize_bridge_name():
-    assert sanitize_bridge_name("Living Room") == "HA Living Room"
-    assert sanitize_bridge_name("  ") == "HA Room"
+    assert sanitize_bridge_name("Living Room") == "Living Room"
+    assert sanitize_bridge_name("  ") == "Room"
 
 
 def test_resolve_entity_area_prefers_entity():
@@ -59,11 +59,11 @@ def test_collect_area_entities_filters_domains_and_excludes():
 
     with (
         patch(
-            "custom_components.ha_hk_room_sync.helpers.er.async_get",
+            "custom_components.homekit_room_sync.helpers.er.async_get",
             return_value=entities,
         ),
         patch(
-            "custom_components.ha_hk_room_sync.helpers.dr.async_get",
+            "custom_components.homekit_room_sync.helpers.dr.async_get",
             return_value=devices,
         ),
     ):

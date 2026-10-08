@@ -1,4 +1,4 @@
-"""Shared helpers for HA HomeKit Room Sync."""
+"""Shared helpers for HomeKit Room Sync."""
 
 from __future__ import annotations
 
@@ -112,7 +112,7 @@ def sanitize_bridge_name(area_name: str) -> str:
     cleaned = " ".join(area_name.split())
     if not cleaned:
         cleaned = "Room"
-    return f"HA {cleaned}"[:30]
+    return cleaned[:30]
 
 
 def default_domains() -> list[str]:

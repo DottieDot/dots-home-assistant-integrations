@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "HA HomeKit Room Sync",
+        "title": "HomeKit Room Sync",
         "description": "Select the Home Assistant Areas that should each get a dedicated HomeKit Bridge. After setup, pair every bridge once in the Apple Home app and assign it to the matching room.",
         "data": {
           "areas": "Areas (rooms)",
@@ -17,14 +17,14 @@
       "domains_required": "Select at least one domain."
     },
     "abort": {
-      "already_configured": "HA HomeKit Room Sync is already configured.",
+      "already_configured": "HomeKit Room Sync is already configured.",
       "no_areas": "Create at least one Area in Home Assistant before setting up this integration."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "HA HomeKit Room Sync options",
+        "title": "HomeKit Room Sync options",
         "description": "Add or remove Areas anytime. New Areas get a new HomeKit Bridge that you pair once into the matching Apple Home room.",
         "data": {
           "areas": "Areas (rooms)",

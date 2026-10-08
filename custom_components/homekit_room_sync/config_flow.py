@@ -1,4 +1,4 @@
-"""Config flow for HA HomeKit Room Sync."""
+"""Config flow for HomeKit Room Sync."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ def _domain_options() -> dict[str, str]:
 
 
 class HaHkRoomSyncConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for HA HomeKit Room Sync."""
+    """Handle a config flow for HomeKit Room Sync."""
 
     VERSION = 1
 
@@ -80,7 +80,7 @@ class HaHkRoomSyncConfigFlow(ConfigFlow, domain=DOMAIN):
                     ),
                 }
                 return self.async_create_entry(
-                    title="HA HomeKit Room Sync",
+                    title="HomeKit Room Sync",
                     data=data,
                 )
 
@@ -119,7 +119,7 @@ class HaHkRoomSyncConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class HaHkRoomSyncOptionsFlow(OptionsFlow):
-    """Handle options for HA HomeKit Room Sync."""
+    """Handle options for HomeKit Room Sync."""
 
     def _entry(self) -> ConfigEntry:
         """Return the config entry being configured."""

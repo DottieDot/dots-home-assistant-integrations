@@ -1,4 +1,4 @@
-"""Status sensors for HA HomeKit Room Sync."""
+"""Status sensors for HomeKit Room Sync."""
 
 from __future__ import annotations
 
@@ -44,8 +44,8 @@ class _RoomSyncBaseSensor(SensorEntity):
         self._manager = manager
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
-            name="HA HomeKit Room Sync",
-            manufacturer="HA HomeKit Room Sync",
+            name="HomeKit Room Sync",
+            manufacturer="HomeKit Room Sync",
             model="Area ↔ Room synchronizer",
         )
 

@@ -7,11 +7,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from homeassistant.config_entries import ConfigEntry, SOURCE_IMPORT
 
-from custom_components.ha_hk_room_sync.bridge_manager import (
+from custom_components.homekit_room_sync.bridge_manager import (
     RoomSyncManager,
     empty_include_filter,
 )
-from custom_components.ha_hk_room_sync.const import (
+from custom_components.homekit_room_sync.const import (
     CONF_AREA_BRIDGES,
     CONF_AREAS,
     CONF_DOMAINS,
@@ -44,8 +44,8 @@ def _sync_entry(**overrides) -> ConfigEntry:
     }
     data.update(overrides)
     return ConfigEntry(
-        domain="ha_hk_room_sync",
-        title="HA HomeKit Room Sync",
+        domain="homekit_room_sync",
+        title="HomeKit Room Sync",
         data=data,
         entry_id="sync1",
     )
@@ -72,8 +72,8 @@ def _homekit_entry(
 @pytest.mark.asyncio
 async def test_sync_updates_options_filter():
     hass = make_hass()
-    kitchen = _homekit_entry("hk_kitchen", "HA Kitchen", 21064, [])
-    living = _homekit_entry("hk_living", "HA Living Room", 21065, [])
+    kitchen = _homekit_entry("hk_kitchen", "Kitchen", 21064, [])
+    living = _homekit_entry("hk_living", "Living Room", 21065, [])
     hass.config_entries.add(kitchen)
     hass.config_entries.add(living)
 
@@ -83,13 +83,13 @@ async def test_sync_updates_options_filter():
                 "kitchen": {
                     "area_id": "kitchen",
                     CONF_ENTRY_ID: "hk_kitchen",
-                    "bridge_name": "HA Kitchen",
+                    "bridge_name": "Kitchen",
                     "port": 21064,
                 },
                 "living": {
                     "area_id": "living",
                     CONF_ENTRY_ID: "hk_living",
-                    "bridge_name": "HA Living Room",
+                    "bridge_name": "Living Room",
                     "port": 21065,
                 },
             }
@@ -107,15 +107,15 @@ async def test_sync_updates_options_filter():
 
     with (
         patch(
-            "custom_components.ha_hk_room_sync.helpers.er.async_get",
+            "custom_components.homekit_room_sync.helpers.er.async_get",
             return_value=entities,
         ),
         patch(
-            "custom_components.ha_hk_room_sync.helpers.dr.async_get",
+            "custom_components.homekit_room_sync.helpers.dr.async_get",
             return_value=FakeDeviceRegistry([]),
         ),
         patch(
-            "custom_components.ha_hk_room_sync.helpers.ar.async_get",
+            "custom_components.homekit_room_sync.helpers.ar.async_get",
             return_value=FakeAreaRegistry(
                 [
                     FakeArea("kitchen", "Kitchen"),
@@ -140,9 +140,9 @@ async def test_sync_updates_options_filter():
 async def test_move_removes_before_add():
     hass = make_hass()
     kitchen = _homekit_entry(
-        "hk_kitchen", "HA Kitchen", 21064, ["light.move_me"]
+        "hk_kitchen", "Kitchen", 21064, ["light.move_me"]
     )
-    living = _homekit_entry("hk_living", "HA Living Room", 21065, [])
+    living = _homekit_entry("hk_living", "Living Room", 21065, [])
     hass.config_entries.add(kitchen)
     hass.config_entries.add(living)
 
@@ -152,13 +152,13 @@ async def test_move_removes_before_add():
                 "kitchen": {
                     "area_id": "kitchen",
                     CONF_ENTRY_ID: "hk_kitchen",
-                    "bridge_name": "HA Kitchen",
+                    "bridge_name": "Kitchen",
                     "port": 21064,
                 },
                 "living": {
                     "area_id": "living",
                     CONF_ENTRY_ID: "hk_living",
-                    "bridge_name": "HA Living Room",
+                    "bridge_name": "Living Room",
                     "port": 21065,
                 },
             }
@@ -178,15 +178,15 @@ async def test_move_removes_before_add():
 
     with (
         patch(
-            "custom_components.ha_hk_room_sync.helpers.er.async_get",
+            "custom_components.homekit_room_sync.helpers.er.async_get",
             return_value=entities,
         ),
         patch(
-            "custom_components.ha_hk_room_sync.helpers.dr.async_get",
+            "custom_components.homekit_room_sync.helpers.dr.async_get",
             return_value=FakeDeviceRegistry([]),
         ),
         patch(
-            "custom_components.ha_hk_room_sync.helpers.ar.async_get",
+            "custom_components.homekit_room_sync.helpers.ar.async_get",
             return_value=FakeAreaRegistry(
                 [
                     FakeArea("kitchen", "Kitchen"),
@@ -214,7 +214,7 @@ async def test_create_bridge_via_import_flow():
     )
     hass.config_entries.add(sync_entry)
 
-    created = _homekit_entry("hk_office", "HA Office", 21064, unique_id=None)
+    created = _homekit_entry("hk_office", "Office", 21064, unique_id=None)
 
     async def _flow_init(domain, context=None, data=None):
         assert domain == HOMEKIT_DOMAIN
@@ -225,17 +225,17 @@ async def test_create_bridge_via_import_flow():
     hass.config_entries.flow.async_init = AsyncMock(side_effect=_flow_init)
 
     with patch(
-        "custom_components.ha_hk_room_sync.helpers.ar.async_get",
+        "custom_components.homekit_room_sync.helpers.ar.async_get",
         return_value=FakeAreaRegistry([FakeArea("office", "Office")]),
     ):
         manager = RoomSyncManager(hass, sync_entry)
         # Avoid entity collection complications for this create-only assertion
         with patch(
-            "custom_components.ha_hk_room_sync.bridge_manager.collect_area_entities",
+            "custom_components.homekit_room_sync.bridge_manager.collect_area_entities",
             return_value={"office": set()},
         ):
             await manager.async_sync()
 
-    assert created.unique_id == "ha_hk_room_sync_area_office"
+    assert created.unique_id == "homekit_room_sync_area_office"
     assert "office" in sync_entry.data[CONF_AREA_BRIDGES]
     assert sync_entry.data[CONF_AREA_BRIDGES]["office"][CONF_ENTRY_ID] == "hk_office"
