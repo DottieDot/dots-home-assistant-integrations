@@ -78,6 +78,15 @@ The integration exposes:
 - **Synced entities** — count from the last sync (+ attributes for areas / updates)
 - **Managed bridges** — bridge count (+ attributes listing area → bridge → suggested HomeKit room)
 
+## Migrating from a single HomeKit Bridge
+
+If you already expose everything through one catch-all HomeKit Bridge:
+
+1. Install and configure this integration for your Areas.
+2. Pair each new per-room bridge into the matching Apple Home room.
+3. Narrow or remove the old catch-all bridge’s entity filter so devices are not exposed twice.
+4. Prefer managing Areas in HA going forward; avoid manually re-rooming accessories in the Home app.
+
 ## Requirements
 
 - Home Assistant **2024.1+** (filter is written to HomeKit `options`, which core reads at runtime)
