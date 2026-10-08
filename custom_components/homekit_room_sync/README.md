@@ -109,6 +109,18 @@ That pairing step is the only per-room setup. Afterward, Area changes in HA driv
 4. Call `homekit_room_sync.sync` and watch Home Assistant logs.
 5. Force-close and reopen the Home app if the UI looks stale.
 
+### Bridge showed my entire home in Apple Home
+
+Home Assistant treats a HomeKit filter with **no include rules** as “expose everything.” Older builds of this integration could create (or empty) a per-area bridge with that unsafe filter, so pairing pulled in the whole house.
+
+This integration now always writes an include-only filter (with a never-matching sentinel when an area has no entities) and creates bridges with the Area’s entities already applied.
+
+**Recovery:**
+
+1. Update HomeKit Room Sync, restart Home Assistant, then call `homekit_room_sync.sync`.
+2. In **Settings → Devices & services → HomeKit Bridge**, open the room bridge and confirm only that Area’s entities are listed.
+3. In the Apple **Home** app, remove the mis-paired bridge, then pair it again into the matching room.
+
 ```yaml
 logger:
   default: info
