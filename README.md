@@ -92,6 +92,7 @@ If you already expose everything through one catch-all HomeKit Bridge:
 - Home Assistant **2024.1+** (filter is written to HomeKit `options`, which core reads at runtime)
 - Built-in **HomeKit Bridge** integration
 - Apple Home hub (HomePod / Apple TV / iPad) as usual for remote HomeKit access
+- GitHub repository should be **public** for HACS installs (and should have a description, topics, and a detected MIT license on the default branch)
 
 ## Limitations (important)
 
