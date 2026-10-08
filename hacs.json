@@ -1,0 +1,5 @@
+{
+  "name": "HA HomeKit Room Sync",
+  "render_readme": true,
+  "homeassistant": "2024.1.0"
+}
