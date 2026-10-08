@@ -28,9 +28,3 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
-          # These three checks read GitHub repository settings / default-branch
-          # license detection — not files on this PR branch. They fail until the
-          # repo About box has a description + topics, and LICENSE is on main
-          # (so GitHub reports an SPDX license). Set those in GitHub Settings →
-          # General, then remove this ignore list.
-          ignore: description topics license
