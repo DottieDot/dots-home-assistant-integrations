@@ -122,6 +122,57 @@ def test_collect_area_entities_excludes_by_label():
     assert result["kitchen"] == {"light.kitchen"}
 
 
+def test_collect_area_entities_excludes_by_device_label():
+    hass = make_hass()
+    entities = FakeEntityRegistry(
+        [
+            FakeEntity("light.kitchen", area_id="kitchen"),
+            FakeEntity(
+                "light.tagged_device",
+                area_id="kitchen",
+                device_id="dev_no_hk",
+            ),
+            FakeEntity(
+                "switch.tagged_device",
+                area_id="kitchen",
+                device_id="dev_no_hk",
+            ),
+            FakeEntity(
+                "light.other_device",
+                area_id="kitchen",
+                device_id="dev_ok",
+            ),
+        ]
+    )
+    devices = FakeDeviceRegistry(
+        [
+            FakeDevice("dev_no_hk", area_id="kitchen", labels={"no_homekit"}),
+            FakeDevice("dev_ok", area_id="kitchen"),
+        ]
+    )
+
+    with (
+        patch(
+            "custom_components.homekit_room_sync.helpers.er.async_get",
+            return_value=entities,
+        ),
+        patch(
+            "custom_components.homekit_room_sync.helpers.dr.async_get",
+            return_value=devices,
+        ),
+    ):
+        result = collect_area_entities(
+            hass,
+            area_ids={"kitchen"},
+            domains={"light", "switch"},
+            include_entities=set(),
+            exclude_entities=set(),
+            exclude_labels={"no_homekit"},
+        )
+
+    assert result["kitchen"] == {"light.kitchen", "light.other_device"}
+
+
 def test_parse_id_list_from_selector():
     from custom_components.homekit_room_sync.helpers import parse_id_list
 

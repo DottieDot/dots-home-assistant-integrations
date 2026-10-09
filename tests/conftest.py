@@ -318,6 +318,7 @@ class FakeEntity:
 class FakeDevice:
     id: str
     area_id: str | None = None
+    labels: set[str] = field(default_factory=set)
 
 
 @dataclass

@@ -62,12 +62,18 @@ def is_exposible_entity(entry: RegistryEntry) -> bool:
 
 
 def entity_has_excluded_label(
-    entry: RegistryEntry, exclude_labels: set[str]
+    entry: RegistryEntry,
+    exclude_labels: set[str],
+    device_reg: dr.DeviceRegistry | None = None,
 ) -> bool:
-    """Return True if the entity carries any configured exclude label."""
+    """Return True if the entity or its device carries any exclude label."""
     if not exclude_labels:
         return False
-    labels = getattr(entry, "labels", None) or set()
+    labels = set(getattr(entry, "labels", None) or ())
+    if device_reg is not None and entry.device_id:
+        device = device_reg.async_get(entry.device_id)
+        if device is not None:
+            labels |= set(getattr(device, "labels", None) or ())
     return bool(exclude_labels.intersection(labels))
 
 
@@ -85,7 +91,7 @@ def collect_area_entities(
     - their effective area is one of ``area_ids``
     - their domain is in ``domains`` OR they are in ``include_entities``
     - they are not in ``exclude_entities``
-    - they do not carry any label in ``exclude_labels``
+    - they (or their parent device) do not carry any label in ``exclude_labels``
     - they are not disabled/hidden/config/diagnostic
     """
     ent_reg = er.async_get(hass)
@@ -97,7 +103,7 @@ def collect_area_entities(
     for entry in ent_reg.entities.values():
         if entry.entity_id in exclude_entities:
             continue
-        if entity_has_excluded_label(entry, excluded_labels):
+        if entity_has_excluded_label(entry, excluded_labels, dev_reg):
             continue
         if not is_exposible_entity(entry):
             # Explicit includes can still force exposure.

@@ -73,7 +73,7 @@ All options use Home Assistant pickers (areas, domains, entities, labels) — no
 | **Exclude entities** | Never expose these entities |
 | **Exclude labels** | Never expose entities that carry any of these HA labels (e.g. tag junk with `no-homekit`) |
 
-Labels must be applied directly on the **entity** (device/area labels do not roll up). Create labels under **Settings → Areas, labels & zones**.
+Labels on the **entity** or its parent **device** both count (area labels do not roll up). Create labels under **Settings → Areas, labels & zones**.
 
 ## Services
 
@@ -111,7 +111,7 @@ Labels must be applied directly on the **entity** (device/area labels do not rol
 
 1. Confirm each Area bridge is paired and assigned to the matching HomeKit room.
 2. Check that the entity’s Area (or its device’s Area) is one of the managed Areas.
-3. Check the entity domain is enabled in the integration options, the entity is not hidden/disabled/config/diagnostic, and it does not carry an excluded label.
+3. Check the entity domain is enabled in the integration options, the entity is not hidden/disabled/config/diagnostic, and neither the entity nor its device carries an excluded label.
 4. Call `homekit_room_sync.sync` and watch Home Assistant logs.
 5. Force-close and reopen the Home app if the UI looks stale.
 
