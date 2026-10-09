@@ -12,19 +12,24 @@ from homeassistant.helpers import (
 )
 from homeassistant.helpers.entity_registry import RegistryEntry
 
-from .const import DEFAULT_DOMAINS
+from .const import AVAILABLE_DOMAINS, DEFAULT_DOMAINS
+
+
+def parse_id_list(value: Any) -> list[str]:
+    """Normalize a selector/text/list field into sorted unique string ids."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        parts = {str(item).strip() for item in value}
+        return sorted(part for part in parts if part)
+    source = str(value)
+    parts = {part.strip() for part in source.replace("\n", ",").split(",")}
+    return sorted(part for part in parts if part)
 
 
 def parse_entity_list(value: Any) -> list[str]:
     """Normalize a text/list field into sorted unique entity ids."""
-    if value is None:
-        return []
-    if isinstance(value, list):
-        source = ",".join(str(item) for item in value)
-    else:
-        source = str(value)
-    parts = {part.strip() for part in source.replace("\n", ",").split(",")}
-    return sorted(part for part in parts if part)
+    return parse_id_list(value)
 
 
 def entity_list_to_text(values: Iterable[str]) -> str:
@@ -56,12 +61,23 @@ def is_exposible_entity(entry: RegistryEntry) -> bool:
     return True
 
 
+def entity_has_excluded_label(
+    entry: RegistryEntry, exclude_labels: set[str]
+) -> bool:
+    """Return True if the entity carries any configured exclude label."""
+    if not exclude_labels:
+        return False
+    labels = getattr(entry, "labels", None) or set()
+    return bool(exclude_labels.intersection(labels))
+
+
 def collect_area_entities(
     hass: HomeAssistant,
     area_ids: set[str],
     domains: set[str],
     include_entities: set[str],
     exclude_entities: set[str],
+    exclude_labels: set[str] | None = None,
 ) -> dict[str, set[str]]:
     """Map each area_id to the set of entity_ids that belong there.
 
@@ -69,15 +85,19 @@ def collect_area_entities(
     - their effective area is one of ``area_ids``
     - their domain is in ``domains`` OR they are in ``include_entities``
     - they are not in ``exclude_entities``
+    - they do not carry any label in ``exclude_labels``
     - they are not disabled/hidden/config/diagnostic
     """
     ent_reg = er.async_get(hass)
     dev_reg = dr.async_get(hass)
+    excluded_labels = exclude_labels or set()
 
     by_area: dict[str, set[str]] = {area_id: set() for area_id in area_ids}
 
     for entry in ent_reg.entities.values():
         if entry.entity_id in exclude_entities:
+            continue
+        if entity_has_excluded_label(entry, excluded_labels):
             continue
         if not is_exposible_entity(entry):
             # Explicit includes can still force exposure.
@@ -118,3 +138,8 @@ def sanitize_bridge_name(area_name: str) -> str:
 def default_domains() -> list[str]:
     """Return a mutable copy of the default domain list."""
     return list(DEFAULT_DOMAINS)
+
+
+def available_domains() -> list[str]:
+    """Return a mutable copy of all selectable domains."""
+    return list(AVAILABLE_DOMAINS)
