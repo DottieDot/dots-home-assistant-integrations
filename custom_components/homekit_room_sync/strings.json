@@ -13,7 +13,7 @@
         },
         "data_description": {
           "domains": "Uncheck domains you do not want in Apple Home. Scene and script appear as switches, not HomeKit scenes.",
-          "exclude_labels": "Create a label in Settings → Areas, labels & zones (for example no-homekit), apply it to junk entities, then select it here."
+          "exclude_labels": "Create a label in Settings → Areas, labels & zones (for example no-homekit), apply it to junk entities or their devices, then select it here."
         }
       }
     },
@@ -40,7 +40,7 @@
         },
         "data_description": {
           "domains": "Uncheck domains you do not want in Apple Home. Scene and script appear as switches, not HomeKit scenes.",
-          "exclude_labels": "Create a label in Settings → Areas, labels & zones (for example no-homekit), apply it to junk entities, then select it here."
+          "exclude_labels": "Create a label in Settings → Areas, labels & zones (for example no-homekit), apply it to junk entities or their devices, then select it here."
         }
       }
     },
