@@ -12,36 +12,97 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
-from homeassistant.helpers import area_registry as ar, config_validation as cv, selector
+from homeassistant.helpers import area_registry as ar, selector
 
 from .const import (
+    AVAILABLE_DOMAINS,
     CONF_AREA_BRIDGES,
     CONF_AREAS,
     CONF_DOMAINS,
     CONF_EXCLUDE_ENTITIES,
+    CONF_EXCLUDE_LABELS,
     CONF_INCLUDE_ENTITIES,
-    DEFAULT_DOMAINS,
     DOMAIN,
 )
-from .helpers import default_domains, entity_list_to_text, parse_entity_list
+from .helpers import default_domains, parse_id_list
 
 STEP_USER = "user"
 
 
-def _area_options(hass) -> dict[str, str]:
+def _has_areas(hass) -> bool:
     registry = ar.async_get(hass)
+    return any(area.id for area in registry.async_list_areas())
+
+
+def _domain_select_options() -> list[dict[str, str]]:
+    return [
+        {
+            "value": domain,
+            "label": domain.replace("_", " ").title(),
+        }
+        for domain in AVAILABLE_DOMAINS
+    ]
+
+
+def _config_schema(
+    *,
+    areas_default: list[str] | None = None,
+    domains_default: list[str] | None = None,
+    include_default: list[str] | None = None,
+    exclude_entities_default: list[str] | None = None,
+    exclude_labels_default: list[str] | None = None,
+) -> vol.Schema:
+    """Build the shared setup/options schema with selection-based UI."""
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_AREAS,
+                default=areas_default or [],
+            ): selector.AreaSelector(
+                selector.AreaSelectorConfig(multiple=True),
+            ),
+            vol.Required(
+                CONF_DOMAINS,
+                default=domains_default if domains_default is not None else default_domains(),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=_domain_select_options(),
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.LIST,
+                    sort=True,
+                )
+            ),
+            vol.Optional(
+                CONF_INCLUDE_ENTITIES,
+                default=include_default or [],
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(multiple=True),
+            ),
+            vol.Optional(
+                CONF_EXCLUDE_ENTITIES,
+                default=exclude_entities_default or [],
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(multiple=True),
+            ),
+            vol.Optional(
+                CONF_EXCLUDE_LABELS,
+                default=exclude_labels_default or [],
+            ): selector.LabelSelector(
+                selector.LabelSelectorConfig(multiple=True),
+            ),
+        }
+    )
+
+
+def _normalize_user_input(user_input: dict[str, Any]) -> dict[str, Any]:
+    """Normalize selector values into stored config lists."""
     return {
-        area.id: area.name
-        for area in sorted(
-            registry.async_list_areas(),
-            key=lambda item: (item.name or "").lower(),
-        )
-        if area.id
+        CONF_AREAS: parse_id_list(user_input.get(CONF_AREAS)),
+        CONF_DOMAINS: parse_id_list(user_input.get(CONF_DOMAINS)),
+        CONF_INCLUDE_ENTITIES: parse_id_list(user_input.get(CONF_INCLUDE_ENTITIES)),
+        CONF_EXCLUDE_ENTITIES: parse_id_list(user_input.get(CONF_EXCLUDE_ENTITIES)),
+        CONF_EXCLUDE_LABELS: parse_id_list(user_input.get(CONF_EXCLUDE_LABELS)),
     }
-
-
-def _domain_options() -> dict[str, str]:
-    return {domain: domain.replace("_", " ").title() for domain in DEFAULT_DOMAINS}
 
 
 class HaHkRoomSyncConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -56,29 +117,17 @@ class HaHkRoomSyncConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
 
-        areas = _area_options(self.hass)
-        if not areas:
+        if not _has_areas(self.hass):
             return self.async_abort(reason="no_areas")
 
         errors: dict[str, str] = {}
         if user_input is not None:
-            selected_areas = list(user_input.get(CONF_AREAS) or [])
-            selected_domains = list(user_input.get(CONF_DOMAINS) or [])
-            if not selected_areas:
+            data = _normalize_user_input(user_input)
+            if not data[CONF_AREAS]:
                 errors["base"] = "areas_required"
-            elif not selected_domains:
+            elif not data[CONF_DOMAINS]:
                 errors["base"] = "domains_required"
             else:
-                data = {
-                    CONF_AREAS: selected_areas,
-                    CONF_DOMAINS: selected_domains,
-                    CONF_INCLUDE_ENTITIES: parse_entity_list(
-                        user_input.get(CONF_INCLUDE_ENTITIES)
-                    ),
-                    CONF_EXCLUDE_ENTITIES: parse_entity_list(
-                        user_input.get(CONF_EXCLUDE_ENTITIES)
-                    ),
-                }
                 return self.async_create_entry(
                     title="HomeKit Room Sync",
                     data=data,
@@ -86,28 +135,7 @@ class HaHkRoomSyncConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id=STEP_USER,
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_AREAS, default=list(areas)): cv.multi_select(
-                        areas
-                    ),
-                    vol.Required(
-                        CONF_DOMAINS, default=default_domains()
-                    ): cv.multi_select(_domain_options()),
-                    vol.Optional(CONF_INCLUDE_ENTITIES, default=""): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            multiline=True,
-                            type=selector.TextSelectorType.TEXT,
-                        )
-                    ),
-                    vol.Optional(CONF_EXCLUDE_ENTITIES, default=""): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            multiline=True,
-                            type=selector.TextSelectorType.TEXT,
-                        )
-                    ),
-                }
-            ),
+            data_schema=_config_schema(),
             errors=errors,
         )
 
@@ -139,69 +167,37 @@ class HaHkRoomSyncOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage areas/domains/overrides."""
-        areas = _area_options(self.hass)
         errors: dict[str, str] = {}
         config_entry = self._entry()
 
         if user_input is not None:
-            selected_areas = list(user_input.get(CONF_AREAS) or [])
-            selected_domains = list(user_input.get(CONF_DOMAINS) or [])
-            if not selected_areas:
+            data = _normalize_user_input(user_input)
+            if not data[CONF_AREAS]:
                 errors["base"] = "areas_required"
-            elif not selected_domains:
+            elif not data[CONF_DOMAINS]:
                 errors["base"] = "domains_required"
             else:
-                data = {
-                    CONF_AREAS: selected_areas,
-                    CONF_DOMAINS: selected_domains,
-                    CONF_INCLUDE_ENTITIES: parse_entity_list(
-                        user_input.get(CONF_INCLUDE_ENTITIES)
-                    ),
-                    CONF_EXCLUDE_ENTITIES: parse_entity_list(
-                        user_input.get(CONF_EXCLUDE_ENTITIES)
-                    ),
-                    # Preserve bridge mapping; manager will reconcile.
-                    CONF_AREA_BRIDGES: config_entry.data.get(CONF_AREA_BRIDGES, {}),
-                }
+                data[CONF_AREA_BRIDGES] = config_entry.data.get(
+                    CONF_AREA_BRIDGES, {}
+                )
                 self.hass.config_entries.async_update_entry(config_entry, data=data)
                 return self.async_create_entry(title="", data={})
 
         current = config_entry.data
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_AREAS,
-                        default=list(current.get(CONF_AREAS, list(areas))),
-                    ): cv.multi_select(areas),
-                    vol.Required(
-                        CONF_DOMAINS,
-                        default=list(current.get(CONF_DOMAINS, default_domains())),
-                    ): cv.multi_select(_domain_options()),
-                    vol.Optional(
-                        CONF_INCLUDE_ENTITIES,
-                        default=entity_list_to_text(
-                            current.get(CONF_INCLUDE_ENTITIES, [])
-                        ),
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            multiline=True,
-                            type=selector.TextSelectorType.TEXT,
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_EXCLUDE_ENTITIES,
-                        default=entity_list_to_text(
-                            current.get(CONF_EXCLUDE_ENTITIES, [])
-                        ),
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            multiline=True,
-                            type=selector.TextSelectorType.TEXT,
-                        )
-                    ),
-                }
+            data_schema=_config_schema(
+                areas_default=list(current.get(CONF_AREAS, [])),
+                domains_default=list(
+                    current.get(CONF_DOMAINS, default_domains())
+                ),
+                include_default=list(current.get(CONF_INCLUDE_ENTITIES, [])),
+                exclude_entities_default=list(
+                    current.get(CONF_EXCLUDE_ENTITIES, [])
+                ),
+                exclude_labels_default=list(
+                    current.get(CONF_EXCLUDE_LABELS, [])
+                ),
             ),
             errors=errors,
         )

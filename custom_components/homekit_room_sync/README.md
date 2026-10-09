@@ -63,12 +63,17 @@ That pairing step is the only per-room setup. Afterward, Area changes in HA driv
 
 ## Configuration options
 
+All options use Home Assistant pickers (areas, domains, entities, labels) — no need to type IDs by hand.
+
 | Option | Description |
 |--------|-------------|
 | **Areas** | HA Areas that each get a dedicated HomeKit Bridge |
-| **Domains** | Entity domains eligible for exposure (lights, switches, …) |
-| **Include entities** | Always expose these entity IDs (still must belong to a managed Area) |
-| **Exclude entities** | Never expose these entity IDs |
+| **Domains** | Entity domains eligible for exposure (lights, switches, …). Scene and script are available but **off by default** because HomeKit Bridge can only expose them as switches, not as native Apple Home scenes. |
+| **Include entities** | Always expose these entities (still must belong to a managed Area) |
+| **Exclude entities** | Never expose these entities |
+| **Exclude labels** | Never expose entities that carry any of these HA labels (e.g. tag junk with `no-homekit`) |
+
+Labels must be applied directly on the **entity** (device/area labels do not roll up). Create labels under **Settings → Areas, labels & zones**.
 
 ## Services
 
@@ -99,13 +104,14 @@ That pairing step is the only per-room setup. Afterward, Area changes in HA driv
 - If you manually drag an accessory to another room inside the Home app, HA cannot see or revert that. Prefer moving the device’s **Area in Home Assistant**.
 - Moving a device between Areas removes it from one bridge and adds it to another. HomeKit treats that as a new accessory on the destination bridge — Home scenes/automations that referenced the old tile may need to be recreated.
 - Cameras generally need HomeKit **accessory mode** and are not included in the default domain list.
+- HA scenes/scripts cannot become native Apple Home scenes via HomeKit Bridge (HAP limitation); they only appear as switches if you enable those domains.
 - Each bridge has a HomeKit limit of ~150 accessories; per-room bridges help stay under that.
 
 ## Troubleshooting
 
 1. Confirm each Area bridge is paired and assigned to the matching HomeKit room.
 2. Check that the entity’s Area (or its device’s Area) is one of the managed Areas.
-3. Check the entity domain is enabled in the integration options and the entity is not hidden/disabled/config/diagnostic.
+3. Check the entity domain is enabled in the integration options, the entity is not hidden/disabled/config/diagnostic, and it does not carry an excluded label.
 4. Call `homekit_room_sync.sync` and watch Home Assistant logs.
 5. Force-close and reopen the Home app if the UI looks stale.
 

@@ -19,6 +19,7 @@ from custom_components.homekit_room_sync.const import (
     CONF_DOMAINS,
     CONF_ENTRY_ID,
     CONF_EXCLUDE_ENTITIES,
+    CONF_EXCLUDE_LABELS,
     CONF_INCLUDE_ENTITIES,
     HK_CONF_FILTER,
     HK_CONF_NAME,
@@ -61,6 +62,7 @@ def _sync_entry(**overrides) -> ConfigEntry:
         CONF_DOMAINS: ["light", "switch"],
         CONF_INCLUDE_ENTITIES: [],
         CONF_EXCLUDE_ENTITIES: [],
+        CONF_EXCLUDE_LABELS: [],
         CONF_AREA_BRIDGES: {},
     }
     data.update(overrides)

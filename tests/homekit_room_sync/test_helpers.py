@@ -79,3 +79,54 @@ def test_collect_area_entities_filters_domains_and_excludes():
     assert result["living"] == {"light.living"}
     assert "sensor.kitchen" not in result["kitchen"]
     assert "light.hidden" not in result["kitchen"]
+
+
+def test_collect_area_entities_excludes_by_label():
+    hass = make_hass()
+    entities = FakeEntityRegistry(
+        [
+            FakeEntity("light.kitchen", area_id="kitchen"),
+            FakeEntity(
+                "binary_sensor.apple_tv_keyboard",
+                area_id="kitchen",
+                labels={"no_homekit"},
+            ),
+            FakeEntity(
+                "switch.also_tagged",
+                area_id="kitchen",
+                labels={"no_homekit", "other"},
+            ),
+        ]
+    )
+    devices = FakeDeviceRegistry([])
+
+    with (
+        patch(
+            "custom_components.homekit_room_sync.helpers.er.async_get",
+            return_value=entities,
+        ),
+        patch(
+            "custom_components.homekit_room_sync.helpers.dr.async_get",
+            return_value=devices,
+        ),
+    ):
+        result = collect_area_entities(
+            hass,
+            area_ids={"kitchen"},
+            domains={"light", "binary_sensor", "switch"},
+            include_entities=set(),
+            exclude_entities=set(),
+            exclude_labels={"no_homekit"},
+        )
+
+    assert result["kitchen"] == {"light.kitchen"}
+
+
+def test_parse_id_list_from_selector():
+    from custom_components.homekit_room_sync.helpers import parse_id_list
+
+    assert parse_id_list(["light.a", "switch.b", "light.a"]) == [
+        "light.a",
+        "switch.b",
+    ]
+    assert parse_id_list(None) == []

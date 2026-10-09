@@ -165,12 +165,67 @@ def _install_ha_stubs() -> None:
         TEXT = "text"
 
     class TextSelector:
-        def __init__(self, config):
+        def __init__(self, config=None):
             self.config = config
+
+    class _SelectorConfig:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+            # Allow both attribute and mapping-style access used by HA helpers.
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+        def __getitem__(self, key):
+            return getattr(self, key)
+
+        def get(self, key, default=None):
+            return getattr(self, key, default)
+
+    class AreaSelectorConfig(_SelectorConfig):
+        pass
+
+    class AreaSelector:
+        def __init__(self, config=None):
+            self.config = config or AreaSelectorConfig()
+
+    class EntitySelectorConfig(_SelectorConfig):
+        pass
+
+    class EntitySelector:
+        def __init__(self, config=None):
+            self.config = config or EntitySelectorConfig()
+
+    class LabelSelectorConfig(_SelectorConfig):
+        pass
+
+    class LabelSelector:
+        def __init__(self, config=None):
+            self.config = config or LabelSelectorConfig()
+
+    class SelectSelectorMode:
+        LIST = "list"
+        DROPDOWN = "dropdown"
+        BOX = "box"
+
+    class SelectSelectorConfig(_SelectorConfig):
+        pass
+
+    class SelectSelector:
+        def __init__(self, config=None):
+            self.config = config or SelectSelectorConfig()
 
     selector.TextSelector = TextSelector
     selector.TextSelectorConfig = TextSelectorConfig
     selector.TextSelectorType = TextSelectorType
+    selector.AreaSelector = AreaSelector
+    selector.AreaSelectorConfig = AreaSelectorConfig
+    selector.EntitySelector = EntitySelector
+    selector.EntitySelectorConfig = EntitySelectorConfig
+    selector.LabelSelector = LabelSelector
+    selector.LabelSelectorConfig = LabelSelectorConfig
+    selector.SelectSelector = SelectSelector
+    selector.SelectSelectorConfig = SelectSelectorConfig
+    selector.SelectSelectorMode = SelectSelectorMode
 
     event_helpers.async_call_later = MagicMock()
     event_helpers.async_track_time_interval = MagicMock()
@@ -256,6 +311,7 @@ class FakeEntity:
     disabled: bool = False
     hidden_by: Any = None
     entity_category: Any = None
+    labels: set[str] = field(default_factory=set)
 
 
 @dataclass

@@ -10,6 +10,7 @@ HOMEKIT_DOMAIN: Final = "homekit"
 CONF_AREAS: Final = "areas"
 CONF_DOMAINS: Final = "domains"
 CONF_EXCLUDE_ENTITIES: Final = "exclude_entities"
+CONF_EXCLUDE_LABELS: Final = "exclude_labels"
 CONF_INCLUDE_ENTITIES: Final = "include_entities"
 CONF_AREA_BRIDGES: Final = "area_bridges"
 CONF_CREATE_BRIDGES: Final = "create_bridges"
@@ -50,8 +51,10 @@ PORT_SEARCH_RANGE: Final = 1000
 # Stable unique_id prefix for HomeKit bridges we create
 BRIDGE_UNIQUE_ID_PREFIX: Final = f"{DOMAIN}_area_"
 
-# Domains commonly exposed on HomeKit bridges (cameras need accessory mode).
-DEFAULT_DOMAINS: Final = [
+# Domains that can be exposed on HomeKit bridges (cameras need accessory mode).
+# scene/script are available but not selected by default — HomeKit Bridge can
+# only expose them as switches, not as native Apple Home scenes.
+AVAILABLE_DOMAINS: Final = [
     "alarm_control_panel",
     "binary_sensor",
     "button",
@@ -71,6 +74,14 @@ DEFAULT_DOMAINS: Final = [
     "vacuum",
     "valve",
     "water_heater",
+]
+
+# Domains enabled for new installs. scene/script omitted because they appear as
+# switches in Apple Home and clutter room grouping.
+DEFAULT_DOMAINS: Final = [
+    domain
+    for domain in AVAILABLE_DOMAINS
+    if domain not in {"scene", "script"}
 ]
 
 SERVICE_SYNC: Final = "sync"

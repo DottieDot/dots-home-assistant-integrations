@@ -20,6 +20,7 @@ from .const import (
     CONF_DOMAINS,
     CONF_ENTRY_ID,
     CONF_EXCLUDE_ENTITIES,
+    CONF_EXCLUDE_LABELS,
     CONF_INCLUDE_ENTITIES,
     CONF_PORT,
     DEFAULT_PORT_START,
@@ -190,6 +191,11 @@ class RoomSyncManager:
         """Manual exclude overrides."""
         return set(self.entry.data.get(CONF_EXCLUDE_ENTITIES, []))
 
+    @property
+    def exclude_labels(self) -> set[str]:
+        """Label ids whose entities should never be exposed."""
+        return set(self.entry.data.get(CONF_EXCLUDE_LABELS, []))
+
     async def async_ensure_bridges(self) -> dict[str, dict[str, Any]]:
         """Create missing HomeKit bridges for configured areas."""
         async with self._lock:
@@ -211,6 +217,7 @@ class RoomSyncManager:
             self.domains,
             self.include_entities,
             self.exclude_entities,
+            self.exclude_labels,
         )
 
     async def _async_ensure_bridges_unlocked(

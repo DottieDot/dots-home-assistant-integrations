@@ -3,12 +3,17 @@
     "step": {
       "user": {
         "title": "HomeKit Room Sync",
-        "description": "Select the Home Assistant Areas that should each get a dedicated HomeKit Bridge. After setup, pair every bridge once in the Apple Home app and assign it to the matching room.",
+        "description": "Select the Home Assistant Areas that should each get a dedicated HomeKit Bridge. After setup, pair every bridge once in the Apple Home app and assign it to the matching room.\n\nScenes and scripts are available under Domains but off by default — HomeKit can only show them as switches.",
         "data": {
           "areas": "Areas (rooms)",
           "domains": "Entity domains to expose",
-          "include_entities": "Always include these entities (one per line)",
-          "exclude_entities": "Never expose these entities (one per line)"
+          "include_entities": "Always include these entities",
+          "exclude_entities": "Never expose these entities",
+          "exclude_labels": "Never expose entities with these labels"
+        },
+        "data_description": {
+          "domains": "Uncheck domains you do not want in Apple Home. Scene and script appear as switches, not HomeKit scenes.",
+          "exclude_labels": "Create a label in Settings → Areas, labels & zones (for example no-homekit), apply it to junk entities, then select it here."
         }
       }
     },
@@ -29,8 +34,13 @@
         "data": {
           "areas": "Areas (rooms)",
           "domains": "Entity domains to expose",
-          "include_entities": "Always include these entities (one per line)",
-          "exclude_entities": "Never expose these entities (one per line)"
+          "include_entities": "Always include these entities",
+          "exclude_entities": "Never expose these entities",
+          "exclude_labels": "Never expose entities with these labels"
+        },
+        "data_description": {
+          "domains": "Uncheck domains you do not want in Apple Home. Scene and script appear as switches, not HomeKit scenes.",
+          "exclude_labels": "Create a label in Settings → Areas, labels & zones (for example no-homekit), apply it to junk entities, then select it here."
         }
       }
     },
